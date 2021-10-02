@@ -423,6 +423,13 @@
 // values for certain setups have ranged from 5 to 20us.
 // #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled.
 
+// Creates a delay between the first step pulse after enabling and after the last step pulse before disabling.
+// Lichuan servo's running in step-dir mode need a 100 ms delay between the motor enable signal and the first step pulse
+// They also needs some time after the last step pulse before they can be disabled without losing steps
+// The delay is executed in the st_wake_up() and st_go_idle() routine
+// The delay time is the same as the stepper_idle_lock_time ($1)
+#define STEP_ENABLE_DELAY // Step enable and disable delay in milliseconds. Used for running servo's in step-dir mode (Lichuan)  // default enabled
+
 // The number of linear motions in the planner buffer to be planned at any give time. The vast
 // majority of RAM that Grbl uses is based on this buffer size. Only increase if there is extra 
 // available RAM, like when re-compiling for a Mega or Sanguino. Or decrease if the Arduino

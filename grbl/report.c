@@ -50,7 +50,7 @@ static void report_util_setting_string(uint8_t n) {
   serial_write('(');
   switch(n) {
     case 0: printPgmString(PSTR("stp pulse")); break;
-    case 1: printPgmString(PSTR("idl delay")); break; 
+    case 1: printPgmString(PSTR("idl delay")); break;
     case 2: printPgmString(PSTR("stp inv")); break;
     case 3: printPgmString(PSTR("dir inv")); break;
     case 4: printPgmString(PSTR("stp en inv")); break;
@@ -101,8 +101,8 @@ static void report_util_uint16_setting(uint16_t n, int val) {
   print_uint32_base10((uint32_t)val);
   report_util_line_feed(); // report_util_setting_string(n);
 }
-static void report_util_float_setting(uint8_t n, float val, uint8_t n_decimal) { 
-  report_util_setting_prefix(n); 
+static void report_util_float_setting(uint8_t n, float val, uint8_t n_decimal) {
+  report_util_setting_prefix(n);
   printFloat(val,n_decimal);
   report_util_line_feed(); // report_util_setting_string(n);
 }
@@ -196,7 +196,7 @@ void report_init_message()
 
 // Grbl help message
 void report_grbl_help() {
-  printPgmString(PSTR("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H ~ ! ? ctrl-x]\r\n"));    
+  printPgmString(PSTR("[HLP:$$ $# $G $I $N $x=val $Nx=line $J=line $SLP $C $X $H ~ ! ? ctrl-x]\r\n"));
 }
 
 // Grbl global settings print out.
@@ -321,8 +321,8 @@ void report_gcode_modes()
     switch (gc_state.modal.program_flow) {
       case PROGRAM_FLOW_PAUSED : serial_write('0'); break;
       // case PROGRAM_FLOW_OPTIONAL_STOP : serial_write('1'); break; // M1 is ignored and not supported.
-      case PROGRAM_FLOW_COMPLETED_M2 : 
-      case PROGRAM_FLOW_COMPLETED_M30 : 
+      case PROGRAM_FLOW_COMPLETED_M2 :
+      case PROGRAM_FLOW_COMPLETED_M30 :
         print_uint8_base10(gc_state.modal.program_flow);
         break;
     }
@@ -342,12 +342,12 @@ void report_gcode_modes()
   } else { serial_write('9'); }
 
   #ifdef ENABLE_PARKING_OVERRIDE_CONTROL
-    if (sys.override_ctrl == OVERRIDE_PARKING_MOTION) { 
+    if (sys.override_ctrl == OVERRIDE_PARKING_MOTION) {
       report_util_gcode_modes_M();
       print_uint8_base10(56);
     }
   #endif
-  
+
   printPgmString(PSTR(" T"));
   print_uint8_base10(gc_state.tool);
 
@@ -389,7 +389,7 @@ void report_build_info(char *line)
   serial_write('N'); // Line number reporting standard.
   serial_write('M'); // M7 mist coolant standard.
   serial_write('+'); // Safety door support standard.
-  serial_write('X'); // Extended lathe command set 
+  serial_write('X'); // Extended lathe command set
   serial_write('1'); // Extended lathe command set Version 1: G33 spindle synchronization support for threading.
   #ifdef COREXY
     serial_write('C');
@@ -618,24 +618,21 @@ void report_realtime_status()
         }
         if (cl_state & COOLANT_STATE_FLOOD) { serial_write('F'); }
         if (cl_state & COOLANT_STATE_MIST) { serial_write('M'); }
-      }  
+      }
     }
   #endif
- 
-  // report the synchronization state (G33) 
-  //if (spindle_synchronization_active()) {												 
-    if (bit_istrue(threading_exec_flags,(EXEC_SYNCHRONIZATION_STATE_REPORT))) {				// report if a report is flagged
-	  printPgmString(PSTR("|Se:"));
-	  printFloat_CoordValue(synchronization_millimeters_error);								// print the synchronization error in the unit set
-	  bit_false(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT);					// clear the flag to avoid reporting the same value again
-    }
-  //}  else if (bit_istrue(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT_FINAL)) {		// if a final report is flagged and spindle synchronization is inactive
-	  else {
-	printPgmString(PSTR("|Se:"));															// Report report a 0 value after G33 , looks better in a GUI
-	printFloat(0,2);																		
-	bit_false(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT_FINAL);				// clear the flag to avoid reporting the same value again
+
+  // report the synchronization state (G33)
+  if (bit_istrue(threading_exec_flags,(EXEC_SYNCHRONIZATION_STATE_REPORT))) {				// report if a report is flagged
+    printPgmString(PSTR("|Se:"));
+	printFloat_CoordValue(synchronization_millimeters_error);								// print the synchronization error in the unit set
+	bit_false(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT);					    // clear the flag to avoid reporting the same value again
   }
- 
+  else {
+	printPgmString(PSTR("|Se:"));															// report a 0 value after G33 , looks better in a GUI
+	printFloat(0,2);
+  }
+
   serial_write('>');
   report_util_line_feed();
 }

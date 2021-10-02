@@ -29,6 +29,7 @@ volatile uint32_t threading_index_Last_timer_tics;				// Time at the last index 
 volatile uint32_t threading_index_timer_tics_passed=0;	    	// Time passed at the last index pulse
 volatile uint32_t threading_index_spindle_speed;				// The measured spindle speed used for G33 initial speed and reporting the real spindle speed
 float threading_mm_per_synchronization_pulse;					// The factor to calculate the feed rate from the spindle speed
+float threading_mm_per_index_pulse;								// The factor to calculate the feed rate from the spindle speed
 volatile float threading_millimeters_target;					// The threading feed target as reported by the planner
 volatile float synchronization_millimeters_error;				// The synchronization feed error calculated at every synchronization pulse. It can be reported to check the threading accuracy
 float threading_feed_rate_calculation_factor;					// factor is used in plan_compute_profile_nominal_speed(), depends on the number of synchronization pulses and is calculated on startup for performance reasons.
@@ -38,9 +39,10 @@ float threading_feed_rate_calculation_factor;					// factor is used in plan_comp
 void threading_init(float K_value)
 {
 	threading_mm_per_synchronization_pulse= K_value / (float) settings.sync_pulses_per_revolution;						// Calculate the global mm feed per synchronization pulse value.
-	threading_feed_rate_calculation_factor  = ((float) 15000000 * (float) settings.sync_pulses_per_revolution);  //calculate the factor to speedup the planner during threading
-	timekeeper_reset();																					//reset the timekeeper to avoid calculation errors when timer overflow occurs (to be sure)
-	threading_reset();				//Sets the target position to zero and calculates the next target position																					
+	threading_mm_per_index_pulse= K_value;																				// Calculate the global mm feed per synchronization pulse value.
+	threading_feed_rate_calculation_factor  = ((float) 15000000 / (float) settings.sync_pulses_per_revolution);			// Calculate the factor to speedup the planner during threading
+	timekeeper_reset();																									// Reset the timekeeper to avoid calculation errors when timer overflow occurs (to be sure)
+	threading_reset();																									// Sets the target position to zero and calculates the next target position																					
 }
 // Reset variables to start the threading
 void threading_reset()
@@ -75,7 +77,7 @@ void process_spindle_index_pulse()
 void process_spindle_synchronization_pulse()
 {
 	threading_sync_timer_tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;		// Calculate the time between synchronization pulses
-	threading_sync_timer_tics_passed+=threading_sync_timer_tics_passed;						// adjust for calculating the next time
+	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						// adjust for calculating the next time
 	threading_sync_pulse_count++;															// Increase the synchronization pulse count
 }
 

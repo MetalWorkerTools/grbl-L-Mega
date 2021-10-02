@@ -1,6 +1,6 @@
 "$-Code"," Setting"," Units"," Setting Description"
 "0","Step pulse time","microseconds","Sets time length per step. Minimum 3usec."
-"1","Step idle delay","milliseconds","Sets a short hold delay when stopping to let dynamics settle before disabling steppers. Value 255 keeps motors enabled with no delay."
+"1","Step enable & idle delay","milliseconds","Sets a short hold delay when starting & stopping to let dynamics settle after enabling but before stepping or disabling steppers. Value 255 keeps motors enabled with no delay."
 "2","Step pulse invert","mask","Inverts the step signal. Set axis bit to invert (00000ZYX)."
 "3","Step direction invert","mask","Inverts the direction signal. Set axis bit to invert (00000ZYX)."
 "4","Invert step enable pin","boolean","Inverts the stepper driver enable pin signal."

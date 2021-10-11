@@ -201,9 +201,9 @@ uint8_t limits_get_state(uint8_t selected_pins) //
   // special pinout for an e-stop, but it is generally recommended to just directly connect
   // your e-stop switch to the Arduino reset pin, since it is the most correct way to do this.
   #ifndef ENABLE_SOFTWARE_DEBOUNCE
-  ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
+    ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
     {
-		system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);			// Signal the receive of an index pulse
+      process_spindle_index_pulse();
     }  
   #else
   // Upon limit pin change, Software debounce by enabling watchdog timer that will handle the pin change after a short delay (watchdog time out). 

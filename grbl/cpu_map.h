@@ -38,6 +38,7 @@
   #define Y_STEP_BIT    3 // MEGA2560 Digital Pin 25
   #define Z_STEP_BIT    4 // MEGA2560 Digital Pin 26
   #define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
+  #define STEP_MASK_Z (1<<Z_STEP_BIT) // Z step bit only
 
   // Define step direction output pins. NOTE: All direction pins must be on the same port.
   #define DIRECTION_DDR     DDRC

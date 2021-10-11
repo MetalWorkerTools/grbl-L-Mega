@@ -246,30 +246,25 @@ void protocol_exec_rt_system()
   }
   //processing spindle index and synchronization pulses. Is done immediately after processing of the alarm to be as accurate as possible
   //depending on settings, reports are triggered.
-  if (bit_istrue(threading_exec_flags, EXEC_SPINDLE_INDEX_PULSE)) {                         //process the detection of a spindle index pulse;
-    if (settings.sync_pulses_per_revolution>0)	{											// If index pulses are enabled.
-      if (index_pulse_active()){															// if a sync pulse was detected;
-        process_spindle_index_pulse();														// Process the pulse so the RPM will be updated in the real time status report
-        if (spindle_synchronization_active()) {												// if spindle synchronization is active
-          if bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_SYNC_STATE){			// if setting report mask is set for reporting the synchronization status in the real time status report
-            system_set_threading_exec_flag(EXEC_SYNCHRONIZATION_STATE_REPORT);				// set the reporting flags to report the synchronization status now and once when finished
-          }
-          if bit_istrue(settings.status_report_mask,BITFLAG_FEED_BACK_SYNC_STATUS){			// if setting report mask is set for synchronization error feedback
-            system_set_threading_exec_flag((EXEC_SYNCHRONIZATION_STATE_FEEDBACK_ERROR));	// set the reporting flags to feedback the synchronization error
-          }
+  if (bit_istrue(threading_exec_flags, EXEC_SPINDLE_INDEX_PULSE)) {                         // Process the detection of a spindle index pulse;
+    if (settings.sync_pulses_per_revolution>0)	{											                      // If index pulses are enabled.
+      calculate_spindle_rpm();														                            // Process the pulse so the RPM will be updated in the real time status report
+      if (spindle_synchronization_active()) {												                        // if spindle synchronization is active
+        if bit_istrue(settings.status_report_mask,BITFLAG_RT_STATUS_SYNC_STATE){			      // if setting report mask is set for reporting the synchronization status in the real time status report
+          system_set_threading_exec_flag(EXEC_SYNCHRONIZATION_STATE_REPORT);				        // set the reporting flags to report the synchronization status now and once when finished
+        }
+        if bit_istrue(settings.status_report_mask,BITFLAG_FEED_BACK_SYNC_STATUS){			      // if setting report mask is set for synchronization error feedback
+          system_set_threading_exec_flag((EXEC_SYNCHRONIZATION_STATE_FEEDBACK_ERROR));	    // set the reporting flags to feedback the synchronization error
         }
       }
-      if (settings.sync_pulses_per_revolution==1) {											// Just an index pulse, emulate the receive of a sync pulse.
-        system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);						    // emulate the receive of a synchronization pulse if there is only an index pulse, eliminates wiring if the is just a index pulse
+      if (settings.sync_pulses_per_revolution==1) {											                    // Just an index pulse, emulate the receive of a sync pulse.
+        process_spindle_synchronization_pulse();
       }
     }
     system_clear_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);
   }
-  if (bit_istrue(threading_exec_flags, EXEC_PLANNER_SYNC_PULSE)) {							// if a sync pulse was detected;
-    if (sync_pulse_active()){																// test again for glitch reducing
-      process_spindle_synchronization_pulse();											// Synchronization pulse has to be counted before G33 becomes active
-      if (spindle_synchronization_active()) {update_planner_feed_rate();}		    		// if spindle synchronization is active, update the planner to synchronize spindle
-    }
+  if (bit_istrue(threading_exec_flags, EXEC_PLANNER_SYNC_PULSE)) {							            // If a sync pulse was detected;
+    if (spindle_synchronization_active()) {update_planner_feed_rate();}		            		// if spindle synchronization is active, update the planner to synchronize spindle
     system_clear_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);
   }
   if (bit_istrue(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_FEEDBACK_ERROR)){

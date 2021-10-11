@@ -323,7 +323,7 @@ void st_go_idle()
    AMASS artificially increases the Bresenham resolution without effecting the algorithm's
    innate exactness. AMASS adapts its resolution levels automatically depending on the step
    frequency to be executed, meaning that for even lower step frequencies the step smoothing
-   level increases. Algorithmically, AMASS is acheived by a simple bit-shifting of the Bresenham
+   level increases. Algorithmically, AMASS is achieved by a simple bit-shifting of the Bresenham
    step count for each AMASS level. For example, for a Level 1 step smoothing, we bit shift
    the Bresenham step event count, effectively multiplying it by 2, while the axis step counts
    remain the same, and then double the stepper ISR frequency. In effect, we are allowing the
@@ -372,7 +372,7 @@ ISR(TIMER1_COMPA_vect)
     DIRECTION_PORT(2) = (DIRECTION_PORT(2) & ~(1 << DIRECTION_BIT(2))) | st.dir_outbits[2];
   #else
     DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
-  #endif // Ramps Boafd
+  #endif // Ramps Board
 
   // Then pulse the stepping pins
   #ifdef DEFAULTS_RAMPS_BOARD
@@ -397,11 +397,10 @@ ISR(TIMER1_COMPA_vect)
   // exactly settings.pulse_microseconds microseconds, independent of the main Timer1 prescaler.
   TCNT0 = st.step_pulse_time; // Reload Timer0 counter
   TCCR0B = (1<<CS01); // Begin Timer0. Full speed, 1/8 prescaler
-
   busy = true;
   sei(); // Re-enable interrupts to allow Stepper Port Reset Interrupt to fire on-time.
          // NOTE: The remaining code in this ISR will finish before returning to main program.
-
+         
   // If there is no step segment, attempt to pop one from the stepper buffer
   if (st.exec_segment == NULL) {
     // Anything in the buffer? If so, load and initialize next step segment.
@@ -518,6 +517,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_z -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits[Z_AXIS] & (1<<DIRECTION_BIT(Z_AXIS))) { sys_position[Z_AXIS]--; }
       else { sys_position[Z_AXIS]++; }
+      threading_step_pulse_count++;
     }
   #else
     if (st.counter_z > st.exec_block->step_event_count) {
@@ -525,6 +525,7 @@ ISR(TIMER1_COMPA_vect)
       st.counter_z -= st.exec_block->step_event_count;
       if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
       else { sys_position[Z_AXIS]++; }
+      threading_step_pulse_count++;
     }
   #endif // Ramps Board
 

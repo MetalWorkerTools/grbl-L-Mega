@@ -6,6 +6,7 @@
 #include "grbl.h"
 
 void timekeeper_init();
+uint32_t get_timer_ticks_passed();
 void timekeeper_reset();
 void debounce_index_pulse();
 void debounce_sync_pulse();

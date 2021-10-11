@@ -20,19 +20,21 @@
 
 #include "grbl.h"
 
-volatile uint8_t threading_exec_flags;							// Global realtime executor bitflag variable for spindle synchronization.
-volatile uint8_t threading_index_pulse_count;					// Global index pulse counter. Only a few pulses are needed to start looking for the first synchronization pulse, so defined as uint8
-volatile uint8_t threading_sync_pulse_count;					// Global synchronization pulse counter. Only a few pulses are needed to start G33 executing, so defined as uint8
+
+volatile uint8_t threading_exec_flags;							    // real time executor bit flag variable for spindle synchronization.
+volatile uint8_t threading_index_pulse_count;					  // index pulse counter. Only a few pulses are needed to start looking for the first synchronization pulse, so defined as uint8
+volatile uint32_t threading_step_pulse_count;						// synchronization pulse counter
+volatile uint32_t threading_sync_pulse_count;					  // synchronization pulse counter. Only a few pulses are needed to start G33 executing, so defined as uint8
 volatile uint32_t threading_sync_Last_timer_tics;				// Time at the last sync pulse
-volatile uint32_t threading_sync_timer_tics_passed;				// Time passed at the last sync pulse
-volatile uint32_t threading_index_Last_timer_tics;				// Time at the last index pulse
-volatile uint32_t threading_index_timer_tics_passed=0;	    	// Time passed at the last index pulse
-volatile uint32_t threading_index_spindle_speed;				// The measured spindle speed used for G33 initial speed and reporting the real spindle speed
-float threading_mm_per_synchronization_pulse;					// The factor to calculate the feed rate from the spindle speed
-float threading_mm_per_index_pulse;								// The factor to calculate the feed rate from the spindle speed
-volatile float threading_millimeters_target;					// The threading feed target as reported by the planner
-volatile float synchronization_millimeters_error;				// The synchronization feed error calculated at every synchronization pulse. It can be reported to check the threading accuracy
-float threading_feed_rate_calculation_factor;					// factor is used in plan_compute_profile_nominal_speed(), depends on the number of synchronization pulses and is calculated on startup for performance reasons.
+volatile uint32_t threading_sync_timer_tics_passed;			// Time passed at the last sync pulse
+volatile uint32_t threading_index_Last_timer_tics;			// Time at the last index pulse
+volatile uint32_t threading_index_timer_tics_passed;	  // Time passed at the last index pulse
+volatile uint32_t spindle_rpm;				// The measured spindle speed used for G33 initial speed and reporting the real spindle speed
+float threading_mm_per_synchronization_pulse;					  // The factor to calculate the feed rate from the spindle speed
+float threading_mm_per_index_pulse;								      // The factor to calculate the feed rate from the spindle speed
+float threading_millimeters_target;					            // The threading feed required for this thread
+float threading_synchronization_millimeters_error;			// The synchronization feed error calculated at every synchronization pulse. It can be reported to check the threading accuracy
+float threading_feed_rate_calculation_factor;					  // factor is used in plan_compute_profile_nominal_speed(), depends on the number of synchronization pulses and is calculated on startup for performance reasons.
 
 // Initializes the G33 threading pass by resetting the timer, spindle counter,
 // setting the current z-position as reference and calculating the (next) target position.
@@ -41,18 +43,17 @@ void threading_init(float K_value)
 	threading_mm_per_synchronization_pulse= K_value / (float) settings.sync_pulses_per_revolution;						// Calculate the global mm feed per synchronization pulse value.
 	threading_mm_per_index_pulse= K_value;																				// Calculate the global mm feed per synchronization pulse value.
 	threading_feed_rate_calculation_factor  = ((float) 15000000 / (float) settings.sync_pulses_per_revolution);			// Calculate the factor to speedup the planner during threading
-	timekeeper_reset();																									// Reset the timekeeper to avoid calculation errors when timer overflow occurs (to be sure)
 	threading_reset();																									// Sets the target position to zero and calculates the next target position																					
 }
 // Reset variables to start the threading
 void threading_reset()
 {
-	threading_index_pulse_count=0;	//set the spindle index pulse count to 0
-	threading_index_Last_timer_tics=0;
-	threading_sync_Last_timer_tics=0;
-	threading_sync_pulse_count=0;
-	threading_millimeters_target=0;																			//Set this value to 0, will be update at the start of the planner block
-	system_clear_threading_exec_flag(0xff);																	//Clear all the bits to avoid executing
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+  	threading_index_pulse_count=0;	          // Set counters to 0
+  	threading_sync_pulse_count=0;
+    threading_step_pulse_count=0;
+  	system_clear_threading_exec_flag(0xff);		// Clear all the bits to avoid executing
+  }  
 }
 
 //Returns the time in 4 useconds tics since the last index pulse
@@ -63,24 +64,31 @@ uint32_t timer_tics_passed_since_last_index_pulse()
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE){tics= get_timer_ticks()-threading_index_Last_timer_tics;}				// Use atomic to avoid errors due to timer updates
 	return tics;
 }
-// This routine processes the spindle index pin hit by increasing the index pulse counter and calculating the time between pulses
-// This calculated spindle speed is used for showing the actual spindle speed in the report
+
+// This routine processes the spindle index pin hit. No float calculations are done in irq time
 void process_spindle_index_pulse()
 {
-	threading_index_timer_tics_passed=get_timer_ticks()-threading_index_Last_timer_tics;		// Calculate the time between index pulses
-	threading_index_Last_timer_tics+=threading_index_timer_tics_passed;							// adjust for calculating the next time
-	threading_index_pulse_count++;																// Increase the pulse count
-	threading_index_spindle_speed = TIMER_TICS_PER_MINUTE / threading_index_timer_tics_passed;	// calculate the spindle speed  at this place (not in the report) reduces the CPU time because a GUI will update more frequently
+	threading_index_timer_tics_passed=get_timer_ticks()-threading_index_Last_timer_tics;		    // Calculate the time between index pulses
+	threading_index_Last_timer_tics+=threading_index_timer_tics_passed;							            // adjust for calculating the next time
+	threading_index_pulse_count++;		
+  system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);			// Signal the receive of an index pulse
+}
+
+// This calculated spindle speed is used for showing the actual spindle speed in the report
+void calculate_spindle_rpm() 
+{
+  	spindle_rpm = TIMER_TICS_PER_MINUTE / threading_index_timer_tics_passed;	// calculate the spindle speed  at this place (not in the report) reduces the CPU time because a GUI will update more frequently
 }
 
 // Processes the synchronization pulses by increasing the synchronization counter and calculating the time between the synchronization pulses
 void process_spindle_synchronization_pulse()
 {
-	threading_sync_timer_tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;		// Calculate the time between synchronization pulses
-	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						// adjust for calculating the next time
-	threading_sync_pulse_count++;															// Increase the synchronization pulse count
+	threading_sync_timer_tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;	      	// Calculate the time between synchronization pulses
+	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						                // adjust for calculating the next time
+  threading_sync_pulse_count++;                                                               // Update the sync pulse counter
+  system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);                                    // Signal the receive of an synchronization pulse
 }
-
+											                                 
 // This routine does the processing needed to keep the Z-axis in sync with the spindle during a threading pass G33
 // This is done only, if the current planner block is a G33 motion indicated by the planner condition PL_COND_FLAG_FEED_PER_REV
 // Recalculates the feed rates for all the blocks in the planner as if a new block was added to the planner que
@@ -91,7 +99,7 @@ void update_planner_feed_rate() {
     plan_update_velocity_profile_parameters();							// call plan_compute_profile_nominal_speed() that wil calculate the requested feed rate
 	plan_cycle_reinitialize();											// update the feed rates in the blocks
   }
-  else synchronization_millimeters_error=0;								// set the error to zero so it can be used in reports
+  else threading_synchronization_millimeters_error=0;								// set the error to zero so it can be used in reports
 }
 
 // returns true if Spindle sync is active otherwise false
@@ -115,11 +123,11 @@ bool index_pulse_active()
 // Returns true if the sync pulse is active
 bool sync_pulse_active()
 {
-	if (settings.sync_pulses_per_revolution==1) return index_pulse_active();				// the index pulse is used as sync pulse
-#ifndef DEFAULTS_RAMPS_BOARD //On Mega board SYNC pulses are on the INT1 interrupt pin (D3)
+	if (settings.sync_pulses_per_revolution==1) return index_pulse_active();  // The index pulse is used as sync pulse
+#ifndef DEFAULTS_RAMPS_BOARD                                                // On Mega board SYNC pulses are on the INT1 interrupt pin (D3)
 	uint8_t pin = system_control_get_state();
-	return bit_istrue(pin,CONTROL_PIN_INDEX_SPINDLE_SYNC);									// spindle sync pulses are on ctrl input
+	return bit_istrue(pin,CONTROL_PIN_INDEX_SPINDLE_SYNC);									  // spindle sync pulses are on ctrl input
 #else
-	return bit_isfalse(SPINDLE_SYNC_PIN, SPINDLE_SYNC_MASK);								// spindle sync pulses are on INT1 = SDA input, active low
+	return bit_isfalse(SPINDLE_SYNC_PIN, SPINDLE_SYNC_MASK);								  // spindle sync pulses are on INT1 = SDA input, active low
 #endif
 }

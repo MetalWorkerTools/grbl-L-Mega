@@ -1046,52 +1046,53 @@ uint8_t gc_execute_line(char *line)
       if (gc_state.modal.motion == MOTION_MODE_LINEAR) {
         mc_line(gc_block.values.xyz, pl_data);
       } else if (gc_state.modal.motion == MOTION_MODE_SPINDLE_SYNC) {
-		 protocol_buffer_synchronize();			// Sync and finish all remaining buffered motions before moving on.
-		 threading_init(gc_block.values.ijk[Z_AXIS]);		//initialize a threading pass, all counters are cleared, check on index pulses timeout can be done
-		 //pl_data->condition ;		
-		 pl_data->condition |= (PL_COND_FLAG_FEED_PER_REV | PL_COND_FLAG_NO_FEED_OVERRIDE);	//During threading (G33) no feed override. Set condition to allow updating the feed rate at every sync pulse
-		 while (threading_index_pulse_count<SPINDLE_INDEX_PULSES_BEFORE_START_G33){
-			if (get_timer_ticks()>(uint32_t)((uint32_t)1500000*(uint32_t)SPINDLE_INDEX_PULSES_BEFORE_START_G33)){				//Check if the spindle pulses are fast enough
-				 FAIL(STATUS_INDEX_PULSE_TIMEOUT);	
-			}
-			protocol_exec_rt_system();						//process real time commands until the spindle has made enough revolutions or a timeout occurs
-		 }
-		 if (settings.sync_pulses_per_revolution>1) {		//There are synchronization pulses so also waiting for the next synchronization pulse
-		   threading_sync_pulse_count=0;
-		   while (threading_sync_pulse_count==0){
-			 if  (get_timer_ticks()>3000000U)				//Check if the sync pulses are fast enough
-			   FAIL(STATUS_SYNCHRONIZATION_PULSE_TIMEOUT);	
-		   protocol_exec_rt_system();						//process real time commands until the spindle has made enough revolutions or a timeout occurs
-		   }
-		 }
-		 //threading_reset();	//reset to undo counting and processing of the previous index and synchronisation pulses
-		 pl_data->feed_rate=gc_block.values.ijk[Z_AXIS] * threading_index_spindle_speed;		//set the start feed rate 
-         mc_line(gc_block.values.xyz, pl_data);	//execute the motion 
-      } else if (gc_state.modal.motion == MOTION_MODE_SEEK) {
-        pl_data->condition |= PL_COND_FLAG_RAPID_MOTION; // Set rapid motion condition flag.
-        mc_line(gc_block.values.xyz, pl_data);
-      } else if ((gc_state.modal.motion == MOTION_MODE_CW_ARC) || (gc_state.modal.motion == MOTION_MODE_CCW_ARC)) {
-        mc_arc(gc_block.values.xyz, pl_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
-            axis_0, axis_1, axis_linear, bit_istrue(gc_parser_flags,GC_PARSER_ARC_IS_CLOCKWISE));
-      } else {
-        // NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
-        // upon a successful probing cycle, the machine position and the returned value should be the same.
-        #ifndef ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES
-          pl_data->condition |= PL_COND_FLAG_NO_FEED_OVERRIDE;
-        #endif
-        gc_update_pos = mc_probe_cycle(gc_block.values.xyz, pl_data, gc_parser_flags);
-      }  
+        protocol_buffer_synchronize();			            // Sync and finish all remaining buffered motions before moving on.
+        threading_init(gc_block.values.ijk[Z_AXIS]);		// initialize a threading pass, all counters are cleared, check on index pulses timeout can be done
+        pl_data->condition |= (PL_COND_FLAG_FEED_PER_REV | PL_COND_FLAG_NO_FEED_OVERRIDE);	//During threading (G33) no feed override. Set condition to allow updating the feed rate at every sync pulse
+        timekeeper_reset();															// Reset the timekeeper to measure the spindle pulse timeout 
+        while (threading_index_pulse_count<SPINDLE_INDEX_PULSES_BEFORE_START_G33){
+				  if (get_timer_ticks_passed()>(uint32_t)((uint32_t)1500000*(uint32_t)SPINDLE_INDEX_PULSES_BEFORE_START_G33))				//Check if the spindle pulses are fast enough
+					  FAIL(STATUS_INDEX_PULSE_TIMEOUT);	
+				  protocol_exec_rt_system();										// Process real time commands until the spindle has made enough revolutions or a timeout occurs
+			  }
+			  if (settings.sync_pulses_per_revolution>1) {		// There are synchronization pulses so wait for the next synchronization pulse
+				  threading_sync_pulse_count=0;
+				  while (threading_sync_pulse_count==0){
+					  if  (get_timer_ticks_passed()>3000000U)			// Check if the sync pulses are fast enough
+						  FAIL(STATUS_SYNCHRONIZATION_PULSE_TIMEOUT);	
+					  protocol_exec_rt_system();									// Process real time commands until the next sync pulse or a timeout occurs
+				  }
+			  }
+			  protocol_exec_rt_system();											                                      // process real time commands if a sync/index pulse was counted, but not processed yet
+        threading_sync_pulse_count=0;                                                         // This is the start C position for spindle synchronization, even if threading is not started yet. The next line will add the threading distance to this target
+        threading_step_pulse_count=0;                                                         // This is the start Z position 
+				pl_data->feed_rate=gc_block.values.ijk[Z_AXIS] * spindle_rpm;		    // Set the start feed rate 
+        mc_line(gc_block.values.xyz, pl_data);	                                              // Execute the motion 
+				} else if (gc_state.modal.motion == MOTION_MODE_SEEK) {
+					pl_data->condition |= PL_COND_FLAG_RAPID_MOTION; // Set rapid motion condition flag.
+					mc_line(gc_block.values.xyz, pl_data);
+				} else if ((gc_state.modal.motion == MOTION_MODE_CW_ARC) || (gc_state.modal.motion == MOTION_MODE_CCW_ARC)) {
+					mc_arc(gc_block.values.xyz, pl_data, gc_state.position, gc_block.values.ijk, gc_block.values.r,
+           axis_0, axis_1, axis_linear, bit_istrue(gc_parser_flags,GC_PARSER_ARC_IS_CLOCKWISE));
+				} else {
+					// NOTE: gc_block.values.xyz is returned from mc_probe_cycle with the updated position value. So
+					// upon a successful probing cycle, the machine position and the returned value should be the same.
+					#ifndef ALLOW_FEED_OVERRIDE_DURING_PROBE_CYCLES
+						pl_data->condition |= PL_COND_FLAG_NO_FEED_OVERRIDE;
+					#endif
+					gc_update_pos = mc_probe_cycle(gc_block.values.xyz, pl_data, gc_parser_flags);
+				}  
      
-      // As far as the parser is concerned, the position is now == target. In reality the
-      // motion control system might still be processing the action and the real tool position
-      // in any intermediate location.
-      if (gc_update_pos == GC_UPDATE_POS_TARGET) {
-        memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_block.values.xyz)); // gc_state.position[] = gc_block.values.xyz[]
-      } else if (gc_update_pos == GC_UPDATE_POS_SYSTEM) {
-        gc_sync_position(); // gc_state.position[] = sys_position
-      } // == GC_UPDATE_POS_NONE
-    }     
-  }
+				// As far as the parser is concerned, the position is now == target. In reality the
+				// motion control system might still be processing the action and the real tool position
+				// in any intermediate location.
+				if (gc_update_pos == GC_UPDATE_POS_TARGET) {
+					memcpy(gc_state.position, gc_block.values.xyz, sizeof(gc_block.values.xyz)); // gc_state.position[] = gc_block.values.xyz[]
+				} else if (gc_update_pos == GC_UPDATE_POS_SYSTEM) {
+					gc_sync_position(); // gc_state.position[] = sys_position
+				} // == GC_UPDATE_POS_NONE
+			}     
+		}
 
   // [21. Program flow ]:
   // M0,M1,M2,M30: Perform non-running program flow actions. During a program pause, the buffer may

@@ -261,15 +261,24 @@ float plan_compute_profile_nominal_speed(plan_block_t *block)
 	if (block->condition & PL_COND_FLAG_RAPID_MOTION) { nominal_speed *= (0.01*sys.r_override); }
 	else
 	if (block->condition & PL_COND_FLAG_FEED_PER_REV) { // SPINDLE_SYNC
-		if bit_istrue(threading_exec_flags, EXEC_PLANNER_SYNC_PULSE) {									// there was a synchronization pulse so calculate the feed rate to be at the right position at the next spindle pulse	
-		  system_clear_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);									// clear the bit to avoid processing again.
-		  threading_millimeters_target-=threading_mm_per_synchronization_pulse;							// calculate the new target					
-		  synchronization_millimeters_error=threading_millimeters_target-block->millimeters;			// calculate the position error. Note that block->millimeters counts down This has to be compensated at the next spindle pulse
-		  block->programmed_rate=(threading_mm_per_index_pulse-synchronization_millimeters_error) / (((float) threading_sync_timer_tics_passed ) / threading_feed_rate_calculation_factor); //calculate the new feed rate to reduce the error.
-	      if (block->programmed_rate>block->rapid_rate)												    // limit speed to max-rate set for this block
-		    block->programmed_rate=block->rapid_rate;													// don't run faster than block->rapid_rate	
-		  }
-		} else {
+		if bit_istrue(threading_exec_flags, EXEC_PLANNER_SYNC_PULSE) {									                 // there was a synchronization pulse so calculate the feed rate to be at the right position at the next spindle pulse	
+		  system_clear_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);									                   // clear the bit to avoid processing again.
+
+      uint32_t tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;                         // tics passed since last sync pulse, to calculate the actual spindle position to eliminate processing delays
+      float spindle_feed_passed=(((float) tics_passed) / ((float) threading_sync_timer_tics_passed)) * threading_mm_per_synchronization_pulse; // the feed passed since last sync pulse is processed
+      float spindle_position=threading_millimeters_target-spindle_feed_passed-((float) threading_sync_pulse_count)*threading_mm_per_synchronization_pulse;                        // The actual position of the spindle expressed as z position. Note that position counts down 
+      
+      int32_t step_count;
+      ATOMIC_BLOCK(ATOMIC_RESTORESTATE){step_count=threading_step_pulse_count;}                       // Block updating the counter by the stepper interrupt while reading
+      float z_position=threading_millimeters_target-((float)step_count)/settings.steps_per_mm[Z_AXIS];// Calculate the actual position based on the step pulses done and the total feed for this thread pass
+           
+		  threading_synchronization_millimeters_error=spindle_position-z_position;	                      // calculate the position error. 
+      
+		  block->programmed_rate=(threading_mm_per_index_pulse-threading_synchronization_millimeters_error) / (((float) threading_sync_timer_tics_passed ) / threading_feed_rate_calculation_factor); //calculate the new feed rate to reduce the error.
+	    if (block->programmed_rate>block->rapid_rate)												                             // limit speed to max-rate set for this block
+		    block->programmed_rate=block->rapid_rate;													                          
+		}
+	} else {
 		if (!(block->condition & PL_COND_FLAG_NO_FEED_OVERRIDE)) { nominal_speed *= (0.01*sys.f_override); }
 		if (nominal_speed > block->rapid_rate) { nominal_speed = block->rapid_rate; }
 	}
@@ -397,6 +406,11 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   block->acceleration = limit_value_by_axis_maximum(settings.acceleration, unit_vec);
   block->rapid_rate = limit_value_by_axis_maximum(settings.max_rate, unit_vec);
 
+  // In feed per revolution mode set the feed distance.
+  if ((block->condition & PL_COND_FLAG_FEED_PER_REV)) {
+    threading_millimeters_target=block->millimeters;             // The feed required
+  }
+
   // Store programmed rate.
   if (block->condition & PL_COND_FLAG_RAPID_MOTION) { block->programmed_rate = block->rapid_rate; }
   else { 
@@ -476,10 +490,6 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 
     // Finish up by recalculating the plan with the new block.
     planner_recalculate();
-  }
-  //In feed per revolution mode set the global threading mm value. This value is defined global to save memory
-  if ((block->condition & PL_COND_FLAG_FEED_PER_REV)) {
-		threading_millimeters_target=block->millimeters;
   }
   return(PLAN_OK);
 }

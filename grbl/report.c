@@ -183,7 +183,7 @@ void report_feedback_message(uint8_t message_code)
 void report_synchronization_error_feedback()
 {
 	printPgmString(PSTR("[Se:"));
-	printFloat_CoordValue(synchronization_millimeters_error);
+	printFloat_CoordValue(threading_synchronization_millimeters_error);
 	serial_write(']');
 	report_util_line_feed();
 }
@@ -558,8 +558,8 @@ void report_realtime_status()
     printFloat_RateValue(st_get_realtime_rate());
     serial_write(',');
 	if (settings.sync_pulses_per_revolution==0) { printFloat(sys.spindle_speed,N_DECIMAL_RPMVALUE); }
-	else if (timer_tics_passed_since_last_index_pulse()<(uint32_t) 1500000) {printFloat((float)threading_index_spindle_speed,0); }		// Spindle speed is > 10 RPM
-  		 else {printFloat(0,0);}
+	else if (timer_tics_passed_since_last_index_pulse()<(uint32_t) 1500000) {printFloat((float)spindle_rpm,0); }		// Spindle speed is < 10 RPM
+  else {printFloat(0,0);}
   #endif
 
   #ifdef REPORT_FIELD_PIN_STATE
@@ -623,14 +623,13 @@ void report_realtime_status()
   #endif
 
   // report the synchronization state (G33)
+  printPgmString(PSTR("|Se:"));
   if (bit_istrue(threading_exec_flags,(EXEC_SYNCHRONIZATION_STATE_REPORT))) {				// report if a report is flagged
-    printPgmString(PSTR("|Se:"));
-	printFloat_CoordValue(synchronization_millimeters_error);								// print the synchronization error in the unit set
-	bit_false(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT);					    // clear the flag to avoid reporting the same value again
+	  printFloat_CoordValue(threading_synchronization_millimeters_error);							// print the synchronization error in the unit set
+	  bit_false(threading_exec_flags,EXEC_SYNCHRONIZATION_STATE_REPORT);					    // clear the flag to avoid reporting the same value again
   }
   else {
-	printPgmString(PSTR("|Se:"));															// report a 0 value after G33 , looks better in a GUI
-	printFloat(0,2);
+	  printFloat(0,2);
   }
 
   serial_write('>');

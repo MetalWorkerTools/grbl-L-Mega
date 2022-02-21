@@ -59,7 +59,10 @@ const __flash settings_t defaults = {\
     .max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL),
     .max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL),
 	  .sync_pulses_per_revolution = DEFAULT_SYNC_PULSES_PER_REVOLUTION,	
-	  .debounce_tics = DEFAULT_DEBOUNCE_TICS
+	  .debounce_tics = DEFAULT_DEBOUNCE_TICS,
+	  .backlash_per_axis[X_AXIS]=DEFAULT_X_BACKLASH_MM,
+	.backlash_per_axis[Y_AXIS]=DEFAULT_Y_BACKLASH_MM,
+	.backlash_per_axis[Z_AXIS]=DEFAULT_Z_BACKLASH_MM,
  };
 
 
@@ -218,6 +221,7 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
             break;
           case 2: settings.acceleration[parameter] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
           case 3: settings.max_travel[parameter] = -value; break;  // Store as negative for grbl internal use.
+		  case 4: settings.backlash_per_axis[parameter] = value; break;
         }
         break; // Exit while-loop after setting has been configured and proceed to the EEPROM write call.
       } else {

@@ -41,7 +41,8 @@
 #define PL_COND_FLAG_SPINDLE_CCW       bit(5)
 #define PL_COND_FLAG_COOLANT_FLOOD     bit(6)
 #define PL_COND_FLAG_COOLANT_MIST      bit(7)
-#define PL_COND_FLAG_FEED_PER_REV      bit(8) // used for feed per revolution mode
+#define PL_COND_FLAG_FEED_PER_REV      bit(9) // used for feed per revolution mode
+#define PL_COND_FLAG_BACKLASH_COMP     bit(8)
 
 #define PL_COND_MOTION_MASK    (PL_COND_FLAG_RAPID_MOTION|PL_COND_FLAG_SYSTEM_MOTION|PL_COND_FLAG_NO_FEED_OVERRIDE)
 #define PL_COND_SPINDLE_MASK   (PL_COND_FLAG_SPINDLE_CW|PL_COND_FLAG_SPINDLE_CCW)
@@ -80,6 +81,7 @@ typedef struct {
 
   // Stored spindle speed data used by spindle overrides and resuming methods.
   float spindle_speed;    // Block spindle speed. Copied from pl_line_data.
+  uint8_t back_lash_comp;
 } plan_block_t;
 
 
@@ -91,6 +93,8 @@ typedef struct {
   uint16_t condition;        // Bitflag variable to indicate planner conditions. See defines above.
 } plan_line_data_t;
 
+
+int32_t * plan_get_position();
 
 // Initialize and reset the motion plan subsystem
 void plan_reset(); // Reset all

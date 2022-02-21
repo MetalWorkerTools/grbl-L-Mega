@@ -82,7 +82,7 @@
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
 // Define Grbl axis settings numbering scheme. Starts at START_VAL, every INCREMENT, over N_SETTINGS.
-#define AXIS_N_SETTINGS          4
+#define AXIS_N_SETTINGS          5
 #define AXIS_SETTINGS_START_VAL  100 // NOTE: Reserving settings values >= 100 for axis settings. Up to 255.
 #define AXIS_SETTINGS_INCREMENT  10  // Must be greater than the number of axis settings
 
@@ -90,6 +90,7 @@
 typedef struct {
   // Axis settings
   float steps_per_mm[N_AXIS];
+  float backlash_per_axis[N_AXIS];
   float max_rate[N_AXIS];
   float acceleration[N_AXIS];
   float max_travel[N_AXIS];

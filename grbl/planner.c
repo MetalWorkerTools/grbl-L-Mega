@@ -46,7 +46,6 @@ int32_t *plan_get_position()
 	return pl.position;
 }
 
-
 // Returns the index of the next block in the ring buffer. Also called by stepper segment buffer.
 uint8_t plan_next_block_index(uint8_t block_index)
 {
@@ -285,7 +284,8 @@ float plan_compute_profile_nominal_speed(plan_block_t *block)
 	    if (block->programmed_rate>block->rapid_rate)												                             // limit speed to max-rate set for this block
 		    block->programmed_rate=block->rapid_rate;													                          
 		}
-	} else {
+	}
+	else {
 		if (!(block->condition & PL_COND_FLAG_NO_FEED_OVERRIDE)) { nominal_speed *= (0.01*sys.f_override); }
 		if (nominal_speed > block->rapid_rate) { nominal_speed = block->rapid_rate; }
 	}
@@ -346,30 +346,36 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   block->spindle_speed = pl_data->spindle_speed;
   block->line_number = pl_data->line_number;
 
-  // Compute and store initial move distance data.
-  int32_t target_steps[N_AXIS], position_steps[N_AXIS];
-  float unit_vec[N_AXIS], delta_mm;
-  uint8_t idx;
-
-  if ((pl_data->condition &(1<<PL_COND_FLAG_BACKLASH_COMP)))
-	block->back_lash_comp = 1;
+	// Compute and store initial move distance data.
+	int32_t target_steps[N_AXIS], position_steps[N_AXIS];
+	float unit_vec[N_AXIS], delta_mm;
+	uint8_t idx;
+	
+	
+	if ((pl_data->condition &(1<<PL_COND_FLAG_BACKLASH_COMP)))
+	{
+	  block->back_lash_comp = 1;
+	}
 	
 	memset(position_steps,0,sizeof(position_steps));
-	
-  // Copy position data based on type of motion being planned.
-  if (block->condition & PL_COND_FLAG_SYSTEM_MOTION) { 
-    #ifdef COREXY
-      position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
-      position_steps[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
-      position_steps[Z_AXIS] = sys_position[Z_AXIS];
-    #else
-      memcpy(position_steps, sys_position, sizeof(sys_position)); 
-    #endif
-  } else { 
-	//If compensated motion, assume we are starting from zero.
+	// Copy position data based on type of motion being planned.
+	if (block->condition & PL_COND_FLAG_SYSTEM_MOTION)
+	{
+		#ifdef COREXY
+		position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
+		position_steps[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
+		position_steps[Z_AXIS] = sys_position[Z_AXIS];
+		#else
+		
+		memcpy(position_steps, sys_position, sizeof(sys_position));
+		#endif
+	}
+	else
+	{
+		//If compensated motion, assume we are starting from zero.
 		if (!block->back_lash_comp)
 		memcpy(position_steps, pl.position, sizeof(pl.position));
-  }
+	}
   #ifdef COREXY
     target_steps[A_MOTOR] = lround(target[A_MOTOR]*settings.steps_per_mm[A_MOTOR]);
     target_steps[B_MOTOR] = lround(target[B_MOTOR]*settings.steps_per_mm[B_MOTOR]);
@@ -401,21 +407,22 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
       delta_mm = (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx];
 	  #endif
     unit_vec[idx] = delta_mm; // Store unit vector numerator
-
+	if (delta_mm!=0)
+	back_lash_compensation.last_comp_direction[idx] = 1;
     // Set direction bits. Bit enabled always means direction is negative.
     #ifdef DEFAULTS_RAMPS_BOARD
-	if (delta_mm < 0.0 )
-	{
-		block->direction_bits[idx] |= get_direction_pin_mask(idx);
-		back_lash_compensation.last_comp_direction[idx] = -1;
-	}
-	#else
-	if (delta_mm < 0.0 )
-	{
-		block->direction_bits |= get_direction_pin_mask(idx);
-		back_lash_compensation.last_comp_direction[idx] = -1;
-	}
-	#endif // DEFAULTS_RAMPS_BOARD
+      if (delta_mm < 0.0 ) 
+	  { 
+	      block->direction_bits[idx] |= get_direction_pin_mask(idx); 
+		  back_lash_compensation.last_comp_direction[idx] = -1;
+	  }
+    #else
+      if (delta_mm < 0.0 ) 
+	  { 
+          block->direction_bits |= get_direction_pin_mask(idx); 
+		  back_lash_compensation.last_comp_direction[idx] = -1;
+	   }
+    #endif // DEFAULTS_RAMPS_BOARD
   }
 
   // Bail if this is a zero-length block. Highly unlikely to occur.
@@ -500,11 +507,10 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 
     // Update previous path unit_vector and planner position.
     memcpy(pl.previous_unit_vec, unit_vec, sizeof(unit_vec)); // pl.previous_unit_vec[] = unit_vec[]
-    
 	//Dont update the planner position for blc. This move should be unknown to the planner.
 	//This should still allow the planner to string the motions together though.
-	if (!(block->back_lash_comp))
-	memcpy(pl.position, target_steps, sizeof(target_steps)); // pl.position[] = target_steps[]
+	if (!(block->back_lash_comp))						   
+    memcpy(pl.position, target_steps, sizeof(target_steps)); // pl.position[] = target_steps[]
 
     // New block is all set. Update buffer head and next buffer head indices.
     block_buffer_head = next_buffer_head;

@@ -59,6 +59,7 @@
 
 // Bit field and masking macros
 #define bit(n) (1 << n)
+#define longbit(x) ((unsigned long)0x00000001 << (x))													 
 #define bit_true(x,mask) (x) |= (mask)
 #define bit_false(x,mask) (x) &= ~(mask)
 #define bit_istrue(x,mask) ((x & mask) != 0)

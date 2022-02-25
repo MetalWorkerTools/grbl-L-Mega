@@ -34,7 +34,6 @@
 
 
 void mc_backlash_comp(float *target, plan_line_data_t *pl_data);
-
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.

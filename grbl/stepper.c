@@ -63,7 +63,7 @@
   uint32_t step_event_count;
   uint8_t direction_bits[N_AXIS];
   uint8_t is_pwm_rate_adjusted; // Tracks motions that require constant laser power/rate
-  uint8_t back_lash_comp;
+  uint8_t back_lash_comp;					
   } st_block_t;
 #else
   typedef struct {
@@ -71,7 +71,7 @@
     uint32_t step_event_count;
     uint8_t direction_bits;
     uint8_t is_pwm_rate_adjusted; // Tracks motions that require constant laser power/rate
-	uint8_t back_lash_comp;
+	uint8_t back_lash_comp;					
   } st_block_t;
 #endif // Ramps Board
 
@@ -256,10 +256,6 @@ void st_wake_up()
     // Initialize stepper output bits to ensure first ISR call does not step.
     st.step_outbits = step_port_invert_mask;
   #endif // Ramps Board
-
-  #ifdef STEP_ENABLE_DELAY
-    delay_ms(settings.stepper_idle_lock_time);  //Wait a bit to give the driver time to wake up. Is used for servo drivers in step-dir mode like Lichuan
-  #endif
 
   // Initialize step pulse timing from settings. Here to ensure updating after re-writing.
   #ifdef STEP_PULSE_DELAY
@@ -465,7 +461,6 @@ ISR(TIMER1_COMPA_vect)
   #else
     st.step_outbits = 0;
   #endif // Ramps Board
-
   // Execute step displacement profile by Bresenham line algorithm
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_x += st.steps[X_AXIS];
@@ -476,26 +471,26 @@ ISR(TIMER1_COMPA_vect)
     if (st.counter_x > st.exec_block->step_event_count) {
       st.step_outbits[X_AXIS] |= (1<<STEP_BIT(X_AXIS));
       st.counter_x -= st.exec_block->step_event_count;
-      //Dont update system position data until all backlash steps are taken up.
-	  if (!st.exec_block->back_lash_comp)
-	  {
-		if (st.exec_block->direction_bits[X_AXIS] & (1<<DIRECTION_BIT(X_AXIS)))
-		{  sys_position[X_AXIS]--; }
-		else { sys_position[X_AXIS]++; }
-      }
-    }
+		//Dont update system position data until all backlash steps are taken up.
+		if (!st.exec_block->back_lash_comp)
+		{
+			if (st.exec_block->direction_bits[X_AXIS] & (1<<DIRECTION_BIT(X_AXIS)))
+			{  sys_position[X_AXIS]--; }
+			else { sys_position[X_AXIS]++; }
+		}
+	}
   #else
     if (st.counter_x > st.exec_block->step_event_count) {
       st.step_outbits |= (1<<X_STEP_BIT);
       st.counter_x -= st.exec_block->step_event_count;
-      //Dont update system position data until all backlash steps are taken up.
-	  if (!st.exec_block->back_lash_comp)
-	  {
-		if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
-		else { sys_position[X_AXIS]++; }
-	  }
-    }
-  #endif // Ramps Board
+		//Dont update system position data until all backlash steps are taken up.
+		if (!st.exec_block->back_lash_comp)
+		{
+			if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
+			else { sys_position[X_AXIS]++; }
+		}
+	}
+	#endif // Ramps Board
 
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_y += st.steps[Y_AXIS];
@@ -506,25 +501,24 @@ ISR(TIMER1_COMPA_vect)
     if (st.counter_y > st.exec_block->step_event_count) {
       st.step_outbits[Y_AXIS] |= (1<<STEP_BIT(Y_AXIS));
       st.counter_y -= st.exec_block->step_event_count;
-      //Dont update system position data until all backlash steps are taken up.
+		//Dont update system position data until all backlash steps are taken up.
 		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits[Y_AXIS] & (1<<DIRECTION_BIT(Y_AXIS))) { sys_position[Y_AXIS]--; }
 			else { sys_position[Y_AXIS]++; }
 		}
-    }
+	}
   #else
     if (st.counter_y > st.exec_block->step_event_count) {
       st.step_outbits |= (1<<Y_STEP_BIT);
       st.counter_y -= st.exec_block->step_event_count;
-      //Dont update system position data until all backlash steps are taken up.
+		//Dont update system position data until all backlash steps are taken up.
 		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
 			else { sys_position[Y_AXIS]++; }
-		}
-		
-    }
+		}	
+	}
   #endif // Ramps Board
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     st.counter_z += st.steps[Z_AXIS];
@@ -535,25 +529,26 @@ ISR(TIMER1_COMPA_vect)
     if (st.counter_z > st.exec_block->step_event_count) {
       st.step_outbits[Z_AXIS] |= (1<<STEP_BIT(Z_AXIS));
       st.counter_z -= st.exec_block->step_event_count;
-      //Dont update system position data until all backlash steps are taken up.
+		//Dont update system position data until all backlash steps are taken up.
 		if (!st.exec_block->back_lash_comp)
-		{
+		{																		   
 			if (st.exec_block->direction_bits[Z_AXIS] & (1<<DIRECTION_BIT(Z_AXIS))) { sys_position[Z_AXIS]--; }
 			else { sys_position[Z_AXIS]++; }
+			threading_step_pulse_count++;
 		}
-      threading_step_pulse_count++;
-    }
+	}
   #else
     if (st.counter_z > st.exec_block->step_event_count) {
       st.step_outbits |= (1<<Z_STEP_BIT);
       st.counter_z -= st.exec_block->step_event_count;
-      if (!st.exec_block->back_lash_comp)
+		//Dont update system position data until all backlash steps are taken up.
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
 			else { sys_position[Z_AXIS]++; }
+			threading_step_pulse_count++;
 		}
-      threading_step_pulse_count++;
-    }
+	}
   #endif // Ramps Board
 
   // During a homing cycle, lock out and prevent desired axes from moving.
@@ -844,21 +839,21 @@ void st_prep_buffer()
         #endif // Ramps Board
 
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-          for (idx=0; idx<N_AXIS; idx++) 
-		  { 
-			st_prep_block->steps[idx] = (pl_block->steps[idx] << 1);
-			st_prep_block->back_lash_comp = pl_block->back_lash_comp;
-		  }
+				for (idx=0; idx<N_AXIS; idx++)
+				{
+					st_prep_block->steps[idx] = (pl_block->steps[idx] << 1);
+					st_prep_block->back_lash_comp = pl_block->back_lash_comp;
+				}
           st_prep_block->step_event_count = (pl_block->step_event_count << 1);
         #else
           // With AMASS enabled, simply bit-shift multiply all Bresenham data by the max AMASS
           // level, such that we never divide beyond the original data anywhere in the algorithm.
           // If the original data is divided, we can lose a step from integer roundoff.
-          for (idx=0; idx<N_AXIS; idx++)
-		  {
-			st_prep_block->steps[idx] = pl_block->steps[idx] << MAX_AMASS_LEVEL;
-			st_prep_block->back_lash_comp = pl_block->back_lash_comp;
-		  }
+				for (idx=0; idx<N_AXIS; idx++)
+				{
+					st_prep_block->steps[idx] = pl_block->steps[idx] << MAX_AMASS_LEVEL;
+					st_prep_block->back_lash_comp = pl_block->back_lash_comp;
+				}
           st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
         #endif
 

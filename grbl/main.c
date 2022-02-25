@@ -96,8 +96,7 @@ int main(void)
     sleep_init();
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
-	backlash_initialize();
-
+	backlash_initialize();				   
 
     // Sync cleared gcode and planner positions to current system position.
     plan_sync_position();

@@ -41,30 +41,31 @@ void mc_line(float *target, plan_line_data_t *pl_data)
   // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
   if (sys.state == STATE_CHECK_MODE) { return; }
 
-	// NOTE: Backlash compensation may be installed here. It will need direction info to track when
-	// to insert a backlash line motion(s) before the intended line motion and will require its own
-	// plan_check_full_buffer() and check for system abort loop. Also for position reporting
-	// backlash steps will need to be also tracked, which will need to be kept at a system level.
-	// There are likely some other things that will need to be tracked as well. However, we feel
-	// that backlash compensation should NOT be handled by Grbl itself, because there are a myriad
-	// of ways to implement it and can be effective or ineffective for different CNC machines. This
-	// would be better handled by the interface as a post-processor task, where the original g-code
-	// is translated and inserts backlash motions that best suits the machine.
-	// NOTE: Perhaps as a middle-ground, all that needs to be sent is a flag or special command that
-	// indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
-	// doesn't update the machine position values. Since the position values used by the g-code
-	// parser and planner are separate from the system machine positions, this is doable.
-	
-	//Determines if the motion we are about to execute has an axis moving in the opposite direction
-	//If it does, the value in settings for that axis is used to determine how far it needs to move
-	//to take up the mechanical slack in the motion for that axis.
-	//Since this doe snot 'insert' a motion to the planner, it just modifies an existing motion
-	//there should be no need to do any other checking of the motion buffer beyond what the planner
-	//is already doing.
-	if (!(pl_data->condition &(1<<PL_COND_FLAG_BACKLASH_COMP)))
-	{
-		backlash_comp(target,pl_data);
-	}
+  // NOTE: Backlash compensation may be installed here. It will need direction info to track when
+  // to insert a backlash line motion(s) before the intended line motion and will require its own
+  // plan_check_full_buffer() and check for system abort loop. Also for position reporting
+  // backlash steps will need to be also tracked, which will need to be kept at a system level.
+  // There are likely some other things that will need to be tracked as well. However, we feel
+  // that backlash compensation should NOT be handled by Grbl itself, because there are a myriad
+  // of ways to implement it and can be effective or ineffective for different CNC machines. This
+  // would be better handled by the interface as a post-processor task, where the original g-code
+  // is translated and inserts backlash motions that best suits the machine.
+  // NOTE: Perhaps as a middle-ground, all that needs to be sent is a flag or special command that
+  // indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
+  // doesn't update the machine position values. Since the position values used by the g-code
+  // parser and planner are separate from the system machine positions, this is doable.
+  //Determines if the motion we are about to execute has an axis moving in the opposite direction
+  //If it does, the value in settings for that axis is used to determine how far it needs to move
+  //to take up the mechanical slack in the motion for that axis.
+  //This could be a re-entrant call from backlash comp, so if it is, we dont want to 'comp the comp move'
+  
+  
+  
+  if (!(pl_data->condition &(1<<PL_COND_FLAG_BACKLASH_COMP)))
+  {
+	  backlash_comp(target,pl_data);
+	  
+  } 
 
   // If the buffer is full: good! That means we are well ahead of the robot.
   // Remain in this loop until there is room in the buffer.

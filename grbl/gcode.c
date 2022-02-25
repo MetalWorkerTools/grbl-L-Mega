@@ -1045,6 +1045,9 @@ uint8_t gc_execute_line(char *line)
       uint8_t gc_update_pos = GC_UPDATE_POS_TARGET;
       if (gc_state.modal.motion == MOTION_MODE_LINEAR) {
         mc_line(gc_block.values.xyz, pl_data);
+	  } else if (gc_state.modal.motion == MOTION_MODE_SEEK) {
+        pl_data->condition |= PL_COND_FLAG_RAPID_MOTION; // Set rapid motion condition flag.
+        mc_line(gc_block.values.xyz, pl_data);
       } else if (gc_state.modal.motion == MOTION_MODE_SPINDLE_SYNC) {
         protocol_buffer_synchronize();			            // Sync and finish all remaining buffered motions before moving on.
         threading_init(gc_block.values.ijk[Z_AXIS]);		// initialize a threading pass, all counters are cleared, check on index pulses timeout can be done

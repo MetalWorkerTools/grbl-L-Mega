@@ -58,11 +58,11 @@ const __flash settings_t defaults = {\
     .max_travel[X_AXIS] = (-DEFAULT_X_MAX_TRAVEL),
     .max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL),
     .max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL),
-	  .sync_pulses_per_revolution = DEFAULT_SYNC_PULSES_PER_REVOLUTION,	
-	  .debounce_tics = DEFAULT_DEBOUNCE_TICS,
-	  .backlash_per_axis[X_AXIS]=DEFAULT_X_BACKLASH_MM,
+	.backlash_per_axis[X_AXIS]=DEFAULT_X_BACKLASH_MM,
 	.backlash_per_axis[Y_AXIS]=DEFAULT_Y_BACKLASH_MM,
 	.backlash_per_axis[Z_AXIS]=DEFAULT_Z_BACKLASH_MM,
+	  .sync_pulses_per_revolution = DEFAULT_SYNC_PULSES_PER_REVOLUTION,	
+	  .debounce_tics = DEFAULT_DEBOUNCE_TICS
  };
 
 
@@ -221,7 +221,7 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
             break;
           case 2: settings.acceleration[parameter] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
           case 3: settings.max_travel[parameter] = -value; break;  // Store as negative for grbl internal use.
-		  case 4: settings.backlash_per_axis[parameter] = value; break;
+		  case 4: settings.backlash_per_axis[parameter] = value; break;														   
         }
         break; // Exit while-loop after setting has been configured and proceed to the EEPROM write call.
       } else {
@@ -233,73 +233,73 @@ uint8_t settings_store_global_setting(uint8_t parameter, float value) {
     }
   } else {
     // Store non-axis Grbl settings
-    uint8_t int8_value = trunc(value);
+    uint8_t int_value = trunc(value);
     uint16_t int16_value = trunc(value);
     switch(parameter) {
       case 0:
-        if (int8_value < 3) { return(STATUS_SETTING_STEP_PULSE_MIN); }
-        settings.pulse_microseconds = int8_value; break;
-      case 1: settings.stepper_idle_lock_time = int8_value; break;
+        if (int_value < 3) { return(STATUS_SETTING_STEP_PULSE_MIN); }
+        settings.pulse_microseconds = int_value; break;
+      case 1: settings.stepper_idle_lock_time = int_value; break;
       case 2:
-        settings.step_invert_mask = int8_value;
+        settings.step_invert_mask = int_value;
         st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
         break;
       case 3:
-        settings.dir_invert_mask = int8_value;
+        settings.dir_invert_mask = int_value;
         st_generate_step_dir_invert_masks(); // Regenerate step and direction port invert masks.
         break;
       case 4: // Reset to ensure change. Immediate re-init may cause problems.
-        if (int8_value) { settings.flags |= BITFLAG_INVERT_ST_ENABLE; }
+        if (int_value) { settings.flags |= BITFLAG_INVERT_ST_ENABLE; }
         else { settings.flags &= ~BITFLAG_INVERT_ST_ENABLE; }
         break;
       case 5: // Reset to ensure change. Immediate re-init may cause problems.
-        if (int8_value) { settings.flags |= BITFLAG_INVERT_LIMIT_PINS; }
+        if (int_value) { settings.flags |= BITFLAG_INVERT_LIMIT_PINS; }
         else { settings.flags &= ~BITFLAG_INVERT_LIMIT_PINS; }
         break;
       case 6: // Reset to ensure change. Immediate re-init may cause problems.
-        if (int8_value) { settings.flags |= BITFLAG_INVERT_PROBE_PIN; }
+        if (int_value) { settings.flags |= BITFLAG_INVERT_PROBE_PIN; }
         else { settings.flags &= ~BITFLAG_INVERT_PROBE_PIN; }
         probe_configure_invert_mask(false);
         break;
-      case 10: settings.status_report_mask = int8_value; break;
+      case 10: settings.status_report_mask = int_value; break;
       case 11: settings.junction_deviation = value; break;
       case 12: settings.arc_tolerance = value; break;
       case 13:
-        if (int8_value) { settings.flags |= BITFLAG_REPORT_INCHES; }
+        if (int_value) { settings.flags |= BITFLAG_REPORT_INCHES; }
         else { settings.flags &= ~BITFLAG_REPORT_INCHES; }
         system_flag_wco_change(); // Make sure WCO is immediately updated.
         break;
       case 20:
-        if (int8_value) {
+        if (int_value) {
           if (bit_isfalse(settings.flags, BITFLAG_HOMING_ENABLE)) { return(STATUS_SOFT_LIMIT_ERROR); }
           settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE;
         } else { settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; }
         break;
       case 21:
-        if (int8_value) { settings.flags |= BITFLAG_HARD_LIMIT_ENABLE; }
+        if (int_value) { settings.flags |= BITFLAG_HARD_LIMIT_ENABLE; }
         else { settings.flags &= ~BITFLAG_HARD_LIMIT_ENABLE; }
         limits_init(); // Re-init to immediately change. NOTE: Nice to have but could be problematic later.
         break;
       case 22:
-        if (int8_value) { settings.flags |= BITFLAG_HOMING_ENABLE; }
+        if (int_value) { settings.flags |= BITFLAG_HOMING_ENABLE; }
         else {
           settings.flags &= ~BITFLAG_HOMING_ENABLE;
           settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; // Force disable soft-limits.
         }
         break;
-      case 23: settings.homing_dir_mask = int8_value; break;
+      case 23: settings.homing_dir_mask = int_value; break;
       case 24: settings.homing_feed_rate = value; break;
       case 25: settings.homing_seek_rate = value; break;
-      case 26: settings.homing_debounce_delay = int8_value; break;
+      case 26: settings.homing_debounce_delay = int_value; break;
       case 27: settings.homing_pulloff = value; break;
       case 30: settings.rpm_max = value; spindle_init(); break; // Re-initialize spindle rpm calibration
       case 31: settings.rpm_min = value; spindle_init(); break; // Re-initialize spindle rpm calibration
       case 32:
-        if (int8_value) { settings.flags |= BITFLAG_LASER_MODE; }
+        if (int_value) { settings.flags |= BITFLAG_LASER_MODE; }
         else { settings.flags &= ~BITFLAG_LASER_MODE; }
         break;
 	    case 40: settings.sync_pulses_per_revolution=	int16_value; break;
-	    case 41: settings.debounce_tics=	int8_value; break;
+	    case 41: settings.debounce_tics=int16_value; break;
       default:
         return(STATUS_INVALID_STATEMENT);
     }

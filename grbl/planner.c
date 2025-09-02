@@ -266,13 +266,13 @@ float plan_compute_profile_nominal_speed(plan_block_t *block)
 
       uint32_t tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;                         // tics passed since last sync pulse, to calculate the actual spindle position to eliminate processing delays
       float spindle_feed_passed=(((float) tics_passed) / ((float) threading_sync_timer_tics_passed)) * threading_mm_per_synchronization_pulse; // the feed passed since last sync pulse is processed
-      float spindle_position=threading_millimeters_target-spindle_feed_passed-((float) threading_sync_pulse_count)*threading_mm_per_synchronization_pulse;                        // The actual position of the spindle expressed as z position. Note that position counts down 
+      float spindle_position=spindle_feed_passed+((float) threading_sync_pulse_count)*threading_mm_per_synchronization_pulse;    // The actual position of the spindle expressed as z position. Note that position counts down 
       
       int32_t step_count;
       ATOMIC_BLOCK(ATOMIC_RESTORESTATE){step_count=threading_step_pulse_count;}                       // Block updating the counter by the stepper interrupt while reading
-      float z_position=threading_millimeters_target-((float)step_count)/settings.steps_per_mm[Z_AXIS];// Calculate the actual position based on the step pulses done and the total feed for this thread pass
+      float z_position=((float)step_count)/settings.steps_per_mm[Z_AXIS];// Calculate the actual position based on the step pulses done and the total feed for this thread pass
            
-		  threading_synchronization_millimeters_error=spindle_position-z_position;	                      // calculate the position error. 
+		  threading_synchronization_millimeters_error=z_position-spindle_position;	                      // calculate the position error. 
       
 		  block->programmed_rate=(threading_mm_per_index_pulse-threading_synchronization_millimeters_error) / (((float) threading_sync_timer_tics_passed ) / threading_feed_rate_calculation_factor); //calculate the new feed rate to reduce the error.
 	    if (block->programmed_rate>block->rapid_rate)												                             // limit speed to max-rate set for this block
@@ -405,11 +405,6 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
   block->millimeters = convert_delta_vector_to_unit_vector(unit_vec);
   block->acceleration = limit_value_by_axis_maximum(settings.acceleration, unit_vec);
   block->rapid_rate = limit_value_by_axis_maximum(settings.max_rate, unit_vec);
-
-  // In feed per revolution mode set the feed distance.
-  if ((block->condition & PL_COND_FLAG_FEED_PER_REV)) {
-    threading_millimeters_target=block->millimeters;             // The feed required
-  }
 
   // Store programmed rate.
   if (block->condition & PL_COND_FLAG_RAPID_MOTION) { block->programmed_rate = block->rapid_rate; }

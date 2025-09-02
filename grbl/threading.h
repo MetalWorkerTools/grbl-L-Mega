@@ -31,7 +31,6 @@ extern volatile uint32_t threading_sync_timer_tics_passed;		// Time passed sync 
 extern volatile uint32_t threading_index_Last_timer_tics;			// Time at last index pulse
 extern volatile uint32_t threading_index_timer_tics_passed;		// Time passed index pulse
 extern volatile uint32_t spindle_rpm;		                      // The spindle speed calculated from the spindle index pulses. Used for displaying the real spindle speed.
-extern float threading_millimeters_target;					          // The threading feed required for this thread
 extern float threading_synchronization_millimeters_error;			// The threading feed error calculated at every synchronization pulse
 extern float threading_mm_per_synchronization_pulse;					// Z-axis motion at each sync pulse. Is not declared as volatile because it is not updated by an ISR routine.
 extern float threading_mm_per_index_pulse;								    // Z-axis motion at each index pulse. Is not declared as volatile because it is not updated by an ISR routine.

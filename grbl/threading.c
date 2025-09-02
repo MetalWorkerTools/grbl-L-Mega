@@ -32,7 +32,6 @@ volatile uint32_t threading_index_timer_tics_passed;	  // Time passed at the las
 volatile uint32_t spindle_rpm;				// The measured spindle speed used for G33 initial speed and reporting the real spindle speed
 float threading_mm_per_synchronization_pulse;					  // The factor to calculate the feed rate from the spindle speed
 float threading_mm_per_index_pulse;								      // The factor to calculate the feed rate from the spindle speed
-float threading_millimeters_target;					            // The threading feed required for this thread
 float threading_synchronization_millimeters_error;			// The synchronization feed error calculated at every synchronization pulse. It can be reported to check the threading accuracy
 float threading_feed_rate_calculation_factor;					  // factor is used in plan_compute_profile_nominal_speed(), depends on the number of synchronization pulses and is calculated on startup for performance reasons.
 

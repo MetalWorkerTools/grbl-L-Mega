@@ -38,16 +38,18 @@
 #define LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS 5		//All pins except Y-Axis pin
 
 #define SPINDLE_INDEX_PULSES_BEFORE_START_G33 3
+#define MINIMAL_SPINDLE_SPEED_G33 10L					// The minimal spindle speed for threading to start
+
 #define INDEX_PULSE_TIMEOUT_TICS 1500000U //6 seconds between index pulses, 10 RPM, every tic is 4 us
 
 // If you have a USB to serial (HC04) or Wifi (ESP8266) to serial adapter connected, you have to disconnect this adapter before flashing GRBL. 
 // To avoid this, connect the adapter to serial port 1,2 or 3 and tell grbl to use this serial port.
 // You can than flash using the USB port connected to USART0 and communicate to grbl by an other serial port.
 //  Define the serial port to use, the mega2560 has four (USART0 .. USART3) usart0 is the default. Uncomment just one
-#define SERIAL0		//uncomment to use USART0 TX0/RX0 (default) 
+//#define SERIAL0		//uncomment to use USART0 TX0/RX0 (default) 
 //#define SERIAL1		//uncomment to use USART1 TX1/RX1 
 //#define SERIAL2		//uncomment to use USART2 TX2/RX2 
-//#define SERIAL3		//uncomment to use USART3 TX3/RX3
+#define SERIAL3		//uncomment to use USART3 TX3/RX3
 
 // Define CPU pin map and default settings.
 // NOTE: OEMs can avoid the need to maintain/update the defaults.h and cpu_map.h files and use only
@@ -255,7 +257,7 @@
 // allowable override values and the coarse and fine increments per command received. Please
 // note the allowable values in the descriptions following each define.
 #define DEFAULT_FEED_OVERRIDE           100 // 100%. Don't change this value.
-#define MAX_FEED_RATE_OVERRIDE          200 // Percent of programmed feed rate (100-255). Usually 120% or 200%
+#define MAX_FEED_RATE_OVERRIDE         1000 // Percent of programmed feed rate (100-255). Usually 120% or 200%
 #define MIN_FEED_RATE_OVERRIDE           10 // Percent of programmed feed rate (1-100). Usually 50% or 1%
 #define FEED_OVERRIDE_COARSE_INCREMENT   10 // (1-99). Usually 10%.
 #define FEED_OVERRIDE_FINE_INCREMENT      1 // (1-99). Usually 1%.
@@ -266,7 +268,7 @@
 // #define RAPID_OVERRIDE_EXTRA_LOW 5 // *NOT SUPPORTED* Percent of rapid (1-99). Usually 5%.
 
 #define DEFAULT_SPINDLE_SPEED_OVERRIDE    100 // 100%. Don't change this value.
-#define MAX_SPINDLE_SPEED_OVERRIDE        200 // Percent of programmed spindle speed (100-255). Usually 200%.
+#define MAX_SPINDLE_SPEED_OVERRIDE       1000 // Percent of programmed spindle speed (100-255). Usually 200%.
 #define MIN_SPINDLE_SPEED_OVERRIDE         10 // Percent of programmed spindle speed (1-100). Usually 10%.
 #define SPINDLE_OVERRIDE_COARSE_INCREMENT  10 // (1-99). Usually 10%.
 #define SPINDLE_OVERRIDE_FINE_INCREMENT     1 // (1-99). Usually 1%.
@@ -490,7 +492,7 @@
 // work well and are cheap to find) and wire in a low-pass circuit into each limit pin.
 #define ENABLE_SOFTWARE_DEBOUNCE // Default enabled for the lathe
 
-// This setting is used for limiting the user settable ($41) debouncing Spindle Index and Synchronization pulses
+// This setting is used for debouncing Spindle Index and Synchronization pulses
 // Even if $41 is set to 0, there is still a high frequenty debounce filter because there is a 
 // double check, once the pulse is detected (ISR) and once the pulse is processed (protocol_execute_realtime())
 #define MIN_DEBOUNCE_TICS 10

@@ -20,4 +20,5 @@ I,Build info write user string command,Disabled
 E,Force sync upon EEPROM write,Disabled
 W,Force sync upon work coordinate offset change,Disabled
 L,Homing initialization auto-lock,Disabled
-X1,Extend Command version 1 (G33),Enabled
+X1, extend Command version 1, G33 , Enabled
+X3, extend Command version 3, X1 + Max spindle speed override 1000 % + max feed override 1000 %

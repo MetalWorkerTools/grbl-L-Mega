@@ -135,9 +135,9 @@ typedef struct {
   #else
     uint8_t homing_axis_lock;    // Locks axes when limits engage. Used as an axis motion mask in the stepper ISR.
   #endif
-  uint8_t f_override;          // Feed rate override value in percent
+  uint16_t f_override;          // Feed rate override value in percent
   uint8_t r_override;          // Rapids override value in percent
-  uint8_t spindle_speed_ovr;   // Spindle speed value in percent
+  uint16_t spindle_speed_ovr;   // Spindle speed value in percent
   uint8_t spindle_stop_ovr;    // Tracks spindle stop override states
   uint8_t report_ovr_counter;  // Tracks when to add override data to status reports.
   uint8_t report_wco_counter;  // Tracks when to add work coordinate offset data to status reports.

@@ -390,7 +390,9 @@ void report_build_info(char *line)
   serial_write('M'); // M7 mist coolant standard.
   serial_write('+'); // Safety door support standard.
   serial_write('X'); // Extended lathe command set
-  serial_write('3'); // Extended lathe command set Version 3: G33 spindle synchronization support for threading + max feed and speed override 1000% for constant surface speed.
+  serial_write('1'); // Extended lathe command set Version 3: G33 spindle synchronization support for threading.
+  serial_write('X'); // Extended lathe command set
+  serial_write('2'); // Extended lathe command set Version 3: Max feed and speed override 1000% for constant surface speed.
   #ifdef COREXY
     serial_write('C');
   #endif

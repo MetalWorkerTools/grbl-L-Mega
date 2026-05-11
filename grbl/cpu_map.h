@@ -93,24 +93,31 @@
   #define CONTROL_FEED_HOLD_BIT     1  // MEGA2560 Analog Pin 9
   #define CONTROL_CYCLE_START_BIT   2  // MEGA2560 Analog Pin 10
   #define CONTROL_SAFETY_DOOR_BIT   3  // MEGA2560 Analog Pin 11
-  #define CONTROL_SPINDLE_SYNC_BIT  7  // MEGA2560 Analog Pin 15, same as probe pin
+  #define CONTROL_SPINDLE_SYNC_BIT  6  // MEGA2560 Analog Pin 14
   #define CONTROL_INT       PCIE2  // Pin change interrupt enable pin
   #define CONTROL_INT_vect  PCINT2_vect
   #define CONTROL_PCMSK     PCMSK2 // Pin change interrupt register
   #define CONTROL_MASK      ((1<<CONTROL_RESET_BIT)|(1<<CONTROL_FEED_HOLD_BIT)|(1<<CONTROL_CYCLE_START_BIT)|(1<<CONTROL_SAFETY_DOOR_BIT)|(1<<CONTROL_SPINDLE_SYNC_BIT))
   
-  // Define probe switch input pin.   is the same as the spindle synchronization pin
+  // Define probe switch input pin. 
   #define PROBE_DDR       DDRK
   #define PROBE_PIN       PINK
   #define PROBE_PORT      PORTK
   #define PROBE_BIT       7  // MEGA2560 Analog Pin 15
   #define PROBE_MASK      (1<<PROBE_BIT)
+
+ // Define spindle sync switch input pin. 
+  #define SPINDLE_SYNC_DDR       DDRK
+  #define SPINDLE_SYNC_PIN       PINK
+  #define SPINDLE_SYNC_PORT      PORTK
+  #define SPINDLE_SYNC_BIT       6      // MEGA2560 Analog Pin 14
+  #define SPINDLE_SYNC_MASK      (1<<SPINDLE_SYNC_BIT)
  
   // Advanced Configuration Below You should not need to touch these variables
   // Set Timer up to use TIMER4B which is attached to Digital Pin 7
   #define SPINDLE_PWM_MAX_VALUE     1024.0 // Translates to about 1.9 kHz PWM frequency at 1/8 prescaler
   #ifndef SPINDLE_PWM_MIN_VALUE
-    #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
+  #define SPINDLE_PWM_MIN_VALUE   1   // Must be greater than zero.
   #endif
   #define SPINDLE_PWM_OFF_VALUE     0
   #define SPINDLE_PWM_RANGE         (SPINDLE_PWM_MAX_VALUE-SPINDLE_PWM_MIN_VALUE)

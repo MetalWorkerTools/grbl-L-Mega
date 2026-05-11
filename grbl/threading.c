@@ -44,14 +44,25 @@ void threading_init(float K_value)
 	threading_feed_rate_calculation_factor  = ((float) 15000000 / (float) settings.sync_pulses_per_revolution);			// Calculate the factor to speedup the planner during threading
 	threading_reset();																									// Sets the target position to zero and calculates the next target position																					
 }
+// Synchronization pin initialization routine.
+void spindle_sync_pin_init()
+{
+  SPINDLE_SYNC_DDR &= ~(SPINDLE_SYNC_MASK); // Configure as input pins
+  #ifdef DISABLE_SPINDLE_SYNC_PIN_PULL_UP
+    SPINDLE_SYNC_PORT &= ~(SPINDLE_SYNC_MASK); // Normal low operation. Requires external pull-down.
+  #else
+    SPINDLE_SYNC_PORT |= SPINDLE_SYNC_MASK;    // Enable internal pull-up resistors. Normal high operation.
+  #endif
+// no configuration of spindle sync pin active level (yet)
+// probe_configure_invert_mask(false); // Initialize invert mask.
+}
 // Reset variables to start the threading
 void threading_reset()
 {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
-  	threading_index_pulse_count=0;	          // Set counters to 0
-  	threading_sync_pulse_count=0;
-    threading_step_pulse_count=0;
-  	system_clear_threading_exec_flag(0xff);		// Clear all the bits to avoid executing
+  threading_index_pulse_count=0;
+  threading_sync_pulse_count=0;
+  system_clear_threading_exec_flag(0xff);		// Clear all the bits to avoid executing
   }  
 }
 
@@ -68,9 +79,9 @@ uint32_t timer_tics_passed_since_last_index_pulse()
 void process_spindle_index_pulse()
 {
 	threading_index_timer_tics_passed=get_timer_ticks()-threading_index_Last_timer_tics;		    // Calculate the time between index pulses
-	threading_index_Last_timer_tics+=threading_index_timer_tics_passed;							            // adjust for calculating the next time
+	threading_index_Last_timer_tics+=threading_index_timer_tics_passed;							    // adjust for calculating the next time
 	threading_index_pulse_count++;		
-  system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);			// Signal the receive of an index pulse
+	system_set_threading_exec_flag(EXEC_SPINDLE_INDEX_PULSE);										// Signal the receive of an index pulse
 }
 
 // This calculated spindle speed is used for showing the actual spindle speed in the report
@@ -83,9 +94,9 @@ void calculate_spindle_rpm()
 void process_spindle_synchronization_pulse()
 {
 	threading_sync_timer_tics_passed=get_timer_ticks()-threading_sync_Last_timer_tics;	      	// Calculate the time between synchronization pulses
-	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						                // adjust for calculating the next time
-  threading_sync_pulse_count++;                                                               // Update the sync pulse counter
-  system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);                                    // Signal the receive of an synchronization pulse
+	threading_sync_Last_timer_tics+=threading_sync_timer_tics_passed;						    // adjust for calculating the next time
+	threading_sync_pulse_count++;                                                               // Update the sync pulse counter
+	system_set_threading_exec_flag(EXEC_PLANNER_SYNC_PULSE);                                    // Signal the receive of an synchronization pulse
 }
 											                                 
 // This routine does the processing needed to keep the Z-axis in sync with the spindle during a threading pass G33
@@ -123,7 +134,7 @@ bool index_pulse_active()
 bool sync_pulse_active()
 {
 	if (settings.sync_pulses_per_revolution==1) return index_pulse_active();  // The index pulse is used as sync pulse
-#ifndef DEFAULTS_RAMPS_BOARD                                                // On Mega board SYNC pulses are on the INT1 interrupt pin (D3)
+#ifndef DEFAULTS_RAMPS_BOARD                                                
 	uint8_t pin = system_control_get_state();
 	return bit_istrue(pin,CONTROL_PIN_INDEX_SPINDLE_SYNC);									  // spindle sync pulses are on ctrl input
 #else

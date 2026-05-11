@@ -38,6 +38,7 @@ extern float threading_feed_rate_calculation_factor;					// Factor is used in pl
 
 void reset_threading_synchronisation_counters();              // resets the synchronization counters
 void threading_init(float K_value);										        // Initializes the G33 threading pass using the K value set in the gcode
+void spindle_sync_pin_init();												          // Initializes the spindle synchronization pin
 uint32_t timer_tics_passed_since_last_index_pulse();
 void process_spindle_index_pulse();
 void calculate_spindle_rpm();

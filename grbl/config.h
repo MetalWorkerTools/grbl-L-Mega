@@ -37,7 +37,7 @@
 #define LIMIT_PIN_MASK_ALL	7					//All pins
 #define LIMIT_PIN_MASK_ALL_EXCEPT_Y_AXIS 5		//All pins except Y-Axis pin
 
-#define SPINDLE_INDEX_PULSES_BEFORE_START_G33 3
+#define SPINDLE_INDEX_PULSES_BEFORE_START_G33 1
 #define MINIMAL_SPINDLE_SPEED_G33 10L					// The minimal spindle speed for threading to start
 
 #define INDEX_PULSE_TIMEOUT_TICS 1500000U //6 seconds between index pulses, 10 RPM, every tic is 4 us
